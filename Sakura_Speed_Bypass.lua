@@ -22,11 +22,15 @@ local CONSTANTS = {
 
     DEPTH = 296,
     SPAM_DELAY = 0.08,
+    MIN_DELAY = 0.02,
+    MAX_DELAY = 1.0,
     MIN_POWER = 1,
     MAX_POWER = 500000,
     -- Hook Lagger style boost (+1 tick stronger)
     MAX_KBPS = math.huge,
     MAX_REPS = 2000,
+    MIN_UI_SCALE = 0.4,
+    MAX_UI_SCALE = 1.5,
 
     DEFAULT_POWER_PC = 110000,
     DEFAULT_POWER_MOBILE = 75000,
@@ -65,6 +69,8 @@ local State = {
     uiScale = 1,
     backgroundIndex = 1,
     antiLag = false,
+    spamDelay = 0.08,
+    settingsOpen = false,
 }
 
 local Bypass = {
@@ -91,6 +97,7 @@ local function saveConfig()
             UiScale = State.uiScale,
             BackgroundIndex = State.backgroundIndex,
             AntiLag = State.antiLag,
+            SpamDelay = State.spamDelay,
         }))
     end)
 end
@@ -104,8 +111,13 @@ local function loadConfig()
         State.powerValue = tonumber(data.PowerValue) or CONSTANTS.DEFAULT_POWER_PC
         State.mode = data.Mode or "PC"
         State.isVisible = data.IsVisible ~= false
-        State.uiScale = math.clamp(tonumber(data.UiScale) or 1, 0.7, 1.4)
+        State.uiScale = math.clamp(tonumber(data.UiScale) or 1, CONSTANTS.MIN_UI_SCALE, CONSTANTS.MAX_UI_SCALE)
         State.antiLag = data.AntiLag == true
+        local d = tonumber(data.SpamDelay)
+        if d then
+            State.spamDelay = math.clamp(d, CONSTANTS.MIN_DELAY, CONSTANTS.MAX_DELAY)
+            CONSTANTS.SPAM_DELAY = State.spamDelay
+        end
         local n = #CONSTANTS.BACKGROUND_IMAGES
         local idx = math.floor(tonumber(data.BackgroundIndex) or 1)
         if idx < 1 then idx = 1 end
@@ -578,8 +590,8 @@ local function buildGui()
     ----------------------------------------------------------------
     local topControls = Instance.new("Frame")
     topControls.Name = "TopControls"
-    topControls.Size = UDim2.new(0, 100, 0, 28)
-    topControls.Position = UDim2.new(1, -108, 0, 8)
+    topControls.Size = UDim2.new(0, 134, 0, 28)
+    topControls.Position = UDim2.new(1, -142, 0, 8)
     topControls.BackgroundTransparency = 1
     topControls.BorderSizePixel = 0
     topControls.ZIndex = 50
@@ -610,9 +622,11 @@ local function buildGui()
     local scaleDownBtn = makeCtrlBtn("ScaleDown", "<", 0)
     local scaleUpBtn = makeCtrlBtn("ScaleUp", ">", 34)
     local minBtn = makeCtrlBtn("Minimize", "—", 68)
+    local settingsBtn = makeCtrlBtn("Settings", "⚙", 102)
+    settingsBtn.TextSize = 14
 
     local function applyScale(newScale)
-        State.uiScale = math.clamp(math.floor((newScale) * 10 + 0.5) / 10, 0.7, 1.4)
+        State.uiScale = math.clamp(math.floor((newScale) * 10 + 0.5) / 10, CONSTANTS.MIN_UI_SCALE, CONSTANTS.MAX_UI_SCALE)
         if Refs.uiScaleObj then
             Refs.uiScaleObj.Scale = State.uiScale
         elseif outer then
@@ -634,6 +648,104 @@ local function buildGui()
     end)
     scaleUpBtn.Activated:Connect(function()
         applyScale((State.uiScale or 1) + 0.1)
+    end)
+
+    ----------------------------------------------------------------
+    -- SETTINGS PANEL (attached to right of main GUI)
+    ----------------------------------------------------------------
+    local settingsPanel = Instance.new("Frame")
+    settingsPanel.Name = "SettingsPanel"
+    settingsPanel.Size = UDim2.new(0, 150, 0, 120)
+    settingsPanel.Position = UDim2.new(1, 8, 0, 0)
+    settingsPanel.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+    settingsPanel.BackgroundTransparency = 0.05
+    settingsPanel.BorderSizePixel = 0
+    settingsPanel.Visible = false
+    settingsPanel.ZIndex = 40
+    settingsPanel.Parent = outer
+    corner(settingsPanel, 14)
+    stroke(settingsPanel, Theme.BorderGlow, 2, 0.25)
+
+    local spTitle = Instance.new("TextLabel")
+    spTitle.Size = UDim2.new(1, -16, 0, 22)
+    spTitle.Position = UDim2.new(0, 10, 0, 8)
+    spTitle.BackgroundTransparency = 1
+    spTitle.Text = "SETTINGS"
+    spTitle.Font = Enum.Font.GothamBold
+    spTitle.TextSize = 13
+    spTitle.TextColor3 = Theme.BorderGlow
+    spTitle.TextXAlignment = Enum.TextXAlignment.Left
+    spTitle.ZIndex = 41
+    spTitle.Parent = settingsPanel
+
+    local delayLbl = Instance.new("TextLabel")
+    delayLbl.Size = UDim2.new(1, -16, 0, 16)
+    delayLbl.Position = UDim2.new(0, 10, 0, 34)
+    delayLbl.BackgroundTransparency = 1
+    delayLbl.Text = "SPAM DELAY (s)"
+    delayLbl.Font = Enum.Font.Gotham
+    delayLbl.TextSize = 11
+    delayLbl.TextColor3 = Theme.TextDim
+    delayLbl.TextXAlignment = Enum.TextXAlignment.Left
+    delayLbl.ZIndex = 41
+    delayLbl.Parent = settingsPanel
+
+    local delayBox = Instance.new("TextBox")
+    delayBox.Name = "DelayBox"
+    delayBox.Size = UDim2.new(1, -20, 0, 32)
+    delayBox.Position = UDim2.new(0, 10, 0, 52)
+    delayBox.BackgroundColor3 = Theme.PanelInner
+    delayBox.BackgroundTransparency = 0.05
+    delayBox.BorderSizePixel = 0
+    delayBox.Text = tostring(State.spamDelay or CONSTANTS.SPAM_DELAY)
+    delayBox.Font = Enum.Font.GothamBold
+    delayBox.TextSize = 16
+    delayBox.TextColor3 = Theme.Text
+    delayBox.ClearTextOnFocus = false
+    delayBox.TextXAlignment = Enum.TextXAlignment.Center
+    delayBox.ZIndex = 42
+    delayBox.Parent = settingsPanel
+    corner(delayBox, 10)
+    stroke(delayBox, Theme.Stroke, 1, 0.3)
+
+    local delayHint = Instance.new("TextLabel")
+    delayHint.Size = UDim2.new(1, -16, 0, 14)
+    delayHint.Position = UDim2.new(0, 10, 0, 90)
+    delayHint.BackgroundTransparency = 1
+    delayHint.Text = "0.02 – 1.0  (lower = stronger)"
+    delayHint.Font = Enum.Font.Gotham
+    delayHint.TextSize = 10
+    delayHint.TextColor3 = Theme.TextDim
+    delayHint.TextXAlignment = Enum.TextXAlignment.Left
+    delayHint.ZIndex = 41
+    delayHint.Parent = settingsPanel
+
+    local function setSpamDelay(val)
+        val = math.clamp(tonumber(val) or State.spamDelay, CONSTANTS.MIN_DELAY, CONSTANTS.MAX_DELAY)
+        -- round to 3 decimals
+        val = math.floor(val * 1000 + 0.5) / 1000
+        State.spamDelay = val
+        CONSTANTS.SPAM_DELAY = val
+        if Refs.delayBox then Refs.delayBox.Text = tostring(val) end
+        restartBypass()
+        saveConfig()
+        print("[SAKURA] spam delay =", val)
+    end
+
+    delayBox.FocusLost:Connect(function()
+        local v = tonumber(delayBox.Text)
+        if v then setSpamDelay(v) else delayBox.Text = tostring(State.spamDelay) end
+    end)
+
+    settingsBtn.Activated:Connect(function()
+        State.settingsOpen = not State.settingsOpen
+        settingsPanel.Visible = State.settingsOpen
+        if State.settingsOpen then
+            settingsBtn.BackgroundColor3 = Color3.fromRGB(190, 55, 40)
+            delayBox.Text = tostring(State.spamDelay or CONSTANTS.SPAM_DELAY)
+        else
+            settingsBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+        end
     end)
 
     local powerCardRef, keyCardRef
@@ -913,6 +1025,9 @@ local function buildGui()
         minBtn = minBtn,
         scaleDownBtn = scaleDownBtn,
         scaleUpBtn = scaleUpBtn,
+        settingsBtn = settingsBtn,
+        settingsPanel = settingsPanel,
+        delayBox = delayBox,
         titleText = titleText,
         bgLabel = bgLabel,
         bgDownBtn = bgDownBtn,
@@ -1029,7 +1144,7 @@ local function refreshVisibility()
 end
 
 local function refreshUIScale()
-    State.uiScale = math.clamp(tonumber(State.uiScale) or 1, 0.7, 1.4)
+    State.uiScale = math.clamp(tonumber(State.uiScale) or 1, CONSTANTS.MIN_UI_SCALE, CONSTANTS.MAX_UI_SCALE)
     if Refs.uiScaleObj then
         Refs.uiScaleObj.Scale = State.uiScale
     end
