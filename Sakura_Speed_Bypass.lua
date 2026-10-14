@@ -22,8 +22,8 @@ local CONSTANTS = {
 
     DEPTH = 296,
     SPAM_DELAY = 0.08,
-    MIN_DELAY = 0.02,
-    MAX_DELAY = 1.0,
+    MIN_DELAY = 0.001,
+    MAX_DELAY = 99,
     MIN_POWER = 1,
     MAX_POWER = 500000,
     -- Hook Lagger style boost (+1 tick stronger)
@@ -114,9 +114,9 @@ local function loadConfig()
         State.uiScale = math.clamp(tonumber(data.UiScale) or 1, CONSTANTS.MIN_UI_SCALE, CONSTANTS.MAX_UI_SCALE)
         State.antiLag = data.AntiLag == true
         local d = tonumber(data.SpamDelay)
-        if d then
-            State.spamDelay = math.clamp(d, CONSTANTS.MIN_DELAY, CONSTANTS.MAX_DELAY)
-            CONSTANTS.SPAM_DELAY = State.spamDelay
+        if d and d > 0 then
+            State.spamDelay = d
+            CONSTANTS.SPAM_DELAY = d
         end
         local n = #CONSTANTS.BACKGROUND_IMAGES
         local idx = math.floor(tonumber(data.BackgroundIndex) or 1)
@@ -674,9 +674,9 @@ local function buildGui()
     spTitle.Size = UDim2.new(1, -50, 0, 22)
     spTitle.Position = UDim2.new(0, 12, 0, 8)
     spTitle.BackgroundTransparency = 1
-    spTitle.Text = "SPAM DELAY"
+    spTitle.Text = "SPAM DELAY SPEED BYPASS X LAGGER"
     spTitle.Font = Enum.Font.GothamBold
-    spTitle.TextSize = 14
+    spTitle.TextSize = 12
     spTitle.TextColor3 = Color3.fromRGB(255, 120, 100)
     spTitle.TextXAlignment = Enum.TextXAlignment.Left
     spTitle.ZIndex = 201
@@ -718,7 +718,7 @@ local function buildGui()
     delayHint.Size = UDim2.new(1, -24, 0, 24)
     delayHint.Position = UDim2.new(0, 12, 0, 86)
     delayHint.BackgroundTransparency = 1
-    delayHint.Text = "Yaz + Enter  |  0.02 – 1.0  (dusuk = guclu)"
+    delayHint.Text = CONSTANTS.DISCORD
     delayHint.Font = Enum.Font.Gotham
     delayHint.TextSize = 11
     delayHint.TextColor3 = Theme.TextDim
@@ -727,8 +727,13 @@ local function buildGui()
     delayHint.Parent = settingsPanel
 
     local function setSpamDelay(val)
-        val = math.clamp(tonumber(val) or State.spamDelay, CONSTANTS.MIN_DELAY, CONSTANTS.MAX_DELAY)
-        val = math.floor(val * 1000 + 0.5) / 1000
+        val = tonumber(val)
+        if not val or val <= 0 then
+            if Refs.delayBox then Refs.delayBox.Text = tostring(State.spamDelay) end
+            return
+        end
+        -- no hard range limit — any positive number allowed
+        val = math.floor(val * 10000 + 0.5) / 10000
         State.spamDelay = val
         CONSTANTS.SPAM_DELAY = val
         if Refs.delayBox then Refs.delayBox.Text = tostring(val) end
