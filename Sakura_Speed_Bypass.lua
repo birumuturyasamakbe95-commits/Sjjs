@@ -21,15 +21,15 @@ local CONSTANTS = {
     GUI_NAME = "SakuraSpeedBypass",
 
     DEPTH = 296,
-    SPAM_DELAY = 0.10,
+    SPAM_DELAY = 0.08,
     MIN_POWER = 1,
     MAX_POWER = 500000,
-    -- Hook Lagger style boost
+    -- Hook Lagger style boost (+1 tick stronger)
     MAX_KBPS = math.huge,
-    MAX_REPS = 1800,
+    MAX_REPS = 2000,
 
-    DEFAULT_POWER_PC = 97000,
-    DEFAULT_POWER_MOBILE = 65000,
+    DEFAULT_POWER_PC = 110000,
+    DEFAULT_POWER_MOBILE = 75000,
     POWER_STEP = 1000,
 
     -- Same background assets as Sakura Duels (sakura.vs)
@@ -64,6 +64,7 @@ local State = {
     listeningKey = false,
     uiScale = 1,
     backgroundIndex = 1,
+    antiLag = false,
 }
 
 local Bypass = {
@@ -89,6 +90,7 @@ local function saveConfig()
             IsVisible = State.isVisible,
             UiScale = State.uiScale,
             BackgroundIndex = State.backgroundIndex,
+            AntiLag = State.antiLag,
         }))
     end)
 end
@@ -103,6 +105,7 @@ local function loadConfig()
         State.mode = data.Mode or "PC"
         State.isVisible = data.IsVisible ~= false
         State.uiScale = math.clamp(tonumber(data.UiScale) or 1, 0.7, 1.4)
+        State.antiLag = data.AntiLag == true
         local n = #CONSTANTS.BACKGROUND_IMAGES
         local idx = math.floor(tonumber(data.BackgroundIndex) or 1)
         if idx < 1 then idx = 1 end
@@ -113,6 +116,79 @@ local function loadConfig()
             State.toggleKey = Enum.KeyCode[data.ToggleKey]
         end
     end)
+end
+
+--=====================================================================
+-- ANTI LAG (from Sakura Duels / sakura.vs)
+--=====================================================================
+local antiLagDescConn = nil
+
+local function applyAntiLagDerender(obj)
+    pcall(function()
+        if obj:IsA("BasePart") then
+            obj.Material = Enum.Material.Plastic
+            obj.Reflectance = 0
+            obj.CastShadow = false
+        elseif obj:IsA("Decal") or obj:IsA("Texture") then
+            obj.Transparency = 1
+        elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam")
+            or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
+            obj.Enabled = false
+        elseif obj:IsA("AnimationController") or obj:IsA("Animator") then
+            for _, t in ipairs(obj:GetPlayingAnimationTracks()) do
+                pcall(function() t:Stop(0) end)
+            end
+        end
+    end)
+end
+
+local function enableAntiLag()
+    State.antiLag = true
+    task.spawn(function()
+        local descs = workspace:GetDescendants()
+        local i = 0
+        local total = #descs
+        while i < total and State.antiLag do
+            for _ = 1, 200 do
+                i = i + 1
+                if i > total then break end
+                applyAntiLagDerender(descs[i])
+            end
+            task.wait()
+        end
+    end)
+    if antiLagDescConn then antiLagDescConn:Disconnect() end
+    antiLagDescConn = workspace.DescendantAdded:Connect(function(obj)
+        if State.antiLag then applyAntiLagDerender(obj) end
+    end)
+end
+
+local function disableAntiLag()
+    State.antiLag = false
+    if antiLagDescConn then
+        antiLagDescConn:Disconnect()
+        antiLagDescConn = nil
+    end
+end
+
+local function toggleAntiLag()
+    if State.antiLag then
+        disableAntiLag()
+    else
+        enableAntiLag()
+    end
+    if Refs.antiLagBtn then
+        if State.antiLag then
+            Refs.antiLagBtn.Text = "ON"
+            Refs.antiLagBtn.TextColor3 = Color3.fromRGB(90, 255, 150)
+            Refs.antiLagBtn.BackgroundColor3 = Color3.fromRGB(30, 50, 40)
+        else
+            Refs.antiLagBtn.Text = "OFF"
+            Refs.antiLagBtn.TextColor3 = Theme.TextDim
+            Refs.antiLagBtn.BackgroundColor3 = Theme.PanelInner
+        end
+    end
+    saveConfig()
 end
 
 --=====================================================================
@@ -374,20 +450,20 @@ local function buildGui()
     bg.BackgroundTransparency = 0
     bg.BorderSizePixel = 0
     bg.ScaleType = Enum.ScaleType.Crop
-    bg.ImageTransparency = 0.42
+    bg.ImageTransparency = 0.28
     bg.ZIndex = 0
     bg.Parent = main
     corner(bg, 20)
     local bgId = CONSTANTS.BACKGROUND_IMAGES[State.backgroundIndex] or CONSTANTS.BG_ASSET
     CONSTANTS.BG_ASSET = bgId
-    loadAssetImage(bg, bgId, { transparency = 0.42, scaleType = Enum.ScaleType.Crop })
+    loadAssetImage(bg, bgId, { transparency = 0.28, scaleType = Enum.ScaleType.Crop })
     Refs.bgImage = bg
 
-    -- Dark gradient wash for readability
+    -- Dark gradient wash (lighter so background shows more)
     local wash = Instance.new("Frame")
     wash.Size = UDim2.new(1, 0, 1, 0)
     wash.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    wash.BackgroundTransparency = 0.38
+    wash.BackgroundTransparency = 0.52
     wash.BorderSizePixel = 0
     wash.ZIndex = 1
     wash.Parent = main
@@ -572,7 +648,7 @@ local function buildGui()
             if vis then
                 outer.Size = UDim2.new(0, 352, 0, 278)
             else
-                outer.Size = UDim2.new(0, 352, 0, 110)
+                outer.Size = UDim2.new(0, 352, 0, 130)
             end
         end
         minBtn.Text = vis and "—" or "+"
@@ -742,7 +818,7 @@ local function buildGui()
     stroke(rightBtn, Theme.Stroke, 1.05, 0.3)
 
     ----------------------------------------------------------------
-    -- HOTKEY CARD
+    -- HOTKEY + ANTI LAG CARD
     ----------------------------------------------------------------
     local keyCard = Instance.new("Frame")
     keyCard.Name = "HotkeyCard"
@@ -757,12 +833,12 @@ local function buildGui()
     stroke(keyCard, Theme.Stroke, 1.15, 0.28)
 
     local keyLabel = Instance.new("TextLabel")
-    keyLabel.Size = UDim2.new(0.55, 0, 1, 0)
-    keyLabel.Position = UDim2.new(0, 18, 0, 0)
+    keyLabel.Size = UDim2.new(0, 70, 1, 0)
+    keyLabel.Position = UDim2.new(0, 14, 0, 0)
     keyLabel.BackgroundTransparency = 1
     keyLabel.Text = "Hotkey"
     keyLabel.Font = Enum.Font.GothamBold
-    keyLabel.TextSize = 15
+    keyLabel.TextSize = 14
     keyLabel.TextColor3 = Theme.Text
     keyLabel.TextXAlignment = Enum.TextXAlignment.Left
     keyLabel.ZIndex = 7
@@ -770,8 +846,8 @@ local function buildGui()
 
     local keyBtn = Instance.new("TextButton")
     keyBtn.Name = "HotkeyBtn"
-    keyBtn.Size = UDim2.new(0, 54, 0, 34)
-    keyBtn.Position = UDim2.new(1, -68, 0.5, -17)
+    keyBtn.Size = UDim2.new(0, 48, 0, 34)
+    keyBtn.Position = UDim2.new(0, 82, 0.5, -17)
     keyBtn.BackgroundColor3 = Theme.PanelInner
     keyBtn.BackgroundTransparency = 0.05
     keyBtn.BorderSizePixel = 0
@@ -784,6 +860,36 @@ local function buildGui()
     keyBtn.Parent = keyCard
     corner(keyBtn, 11)
     stroke(keyBtn, Theme.Stroke, 1.05, 0.3)
+
+    -- Anti Lag (from Sakura Duels) next to Hotkey
+    local antiLagLabel = Instance.new("TextLabel")
+    antiLagLabel.Size = UDim2.new(0, 70, 1, 0)
+    antiLagLabel.Position = UDim2.new(0, 150, 0, 0)
+    antiLagLabel.BackgroundTransparency = 1
+    antiLagLabel.Text = "Anti Lag"
+    antiLagLabel.Font = Enum.Font.GothamBold
+    antiLagLabel.TextSize = 13
+    antiLagLabel.TextColor3 = Theme.Text
+    antiLagLabel.TextXAlignment = Enum.TextXAlignment.Left
+    antiLagLabel.ZIndex = 7
+    antiLagLabel.Parent = keyCard
+
+    local antiLagBtn = Instance.new("TextButton")
+    antiLagBtn.Name = "AntiLagBtn"
+    antiLagBtn.Size = UDim2.new(0, 54, 0, 34)
+    antiLagBtn.Position = UDim2.new(1, -68, 0.5, -17)
+    antiLagBtn.BackgroundColor3 = State.antiLag and Color3.fromRGB(30, 50, 40) or Theme.PanelInner
+    antiLagBtn.BackgroundTransparency = 0.05
+    antiLagBtn.BorderSizePixel = 0
+    antiLagBtn.Text = State.antiLag and "ON" or "OFF"
+    antiLagBtn.Font = Enum.Font.GothamBold
+    antiLagBtn.TextSize = 13
+    antiLagBtn.TextColor3 = State.antiLag and Color3.fromRGB(90, 255, 150) or Theme.TextDim
+    antiLagBtn.AutoButtonColor = false
+    antiLagBtn.ZIndex = 8
+    antiLagBtn.Parent = keyCard
+    corner(antiLagBtn, 11)
+    stroke(antiLagBtn, Theme.Stroke, 1.05, 0.3)
 
     powerCardRef = powerCard
     keyCardRef = keyCard
@@ -812,8 +918,9 @@ local function buildGui()
         bgDownBtn = bgDownBtn,
         bgUpBtn = bgUpBtn,
         bgImage = Refs.bgImage or bg,
+        antiLagBtn = antiLagBtn,
         fullSize = UDim2.new(0, 352, 0, 278),
-        miniSize = UDim2.new(0, 352, 0, 110),
+        miniSize = UDim2.new(0, 352, 0, 130),
     }
 
     local uiScaleObj = Instance.new("UIScale")
@@ -875,7 +982,20 @@ local function refreshBackground()
         Refs.bgLabel.Text = "BG " .. tostring(idx)
     end
     if Refs.bgImage then
-        loadAssetImage(Refs.bgImage, id, { transparency = 0.42, scaleType = Enum.ScaleType.Crop })
+        loadAssetImage(Refs.bgImage, id, { transparency = 0.28, scaleType = Enum.ScaleType.Crop })
+    end
+end
+
+local function refreshAntiLag()
+    if not Refs.antiLagBtn then return end
+    if State.antiLag then
+        Refs.antiLagBtn.Text = "ON"
+        Refs.antiLagBtn.TextColor3 = Color3.fromRGB(90, 255, 150)
+        Refs.antiLagBtn.BackgroundColor3 = Color3.fromRGB(30, 50, 40)
+    else
+        Refs.antiLagBtn.Text = "OFF"
+        Refs.antiLagBtn.TextColor3 = Theme.TextDim
+        Refs.antiLagBtn.BackgroundColor3 = Theme.PanelInner
     end
 end
 
@@ -1000,6 +1120,12 @@ local function bindEvents()
         end)
     end
 
+    if r.antiLagBtn then
+        r.antiLagBtn.Activated:Connect(function()
+            toggleAntiLag()
+        end)
+    end
+
     r.keyBtn.MouseButton1Click:Connect(function()
         if State.listeningKey then return end
         State.listeningKey = true
@@ -1037,12 +1163,16 @@ refreshStatus()
 refreshPower()
 refreshBackground()
 refreshKey()
+refreshAntiLag()
 refreshVisibility()
 refreshUIScale()
 bindEvents()
 
 if State.enabled then
     startBypass(State.powerValue)
+end
+if State.antiLag then
+    enableAntiLag()
 end
 
 _G.SakuraSpeedBypass = {
