@@ -622,11 +622,14 @@ local function buildGui()
     local scaleDownBtn = makeCtrlBtn("ScaleDown", "<", 0)
     local scaleUpBtn = makeCtrlBtn("ScaleUp", ">", 34)
     local minBtn = makeCtrlBtn("Minimize", "—", 68)
-    local settingsBtn = makeCtrlBtn("Settings", "⚙", 102)
+    -- "D" = Delay panel (works on all executors; emoji may not render)
+    local settingsBtn = makeCtrlBtn("Settings", "D", 102)
     settingsBtn.TextSize = 14
 
     local function applyScale(newScale)
-        State.uiScale = math.clamp(math.floor((newScale) * 10 + 0.5) / 10, CONSTANTS.MIN_UI_SCALE, CONSTANTS.MAX_UI_SCALE)
+        local minS = CONSTANTS.MIN_UI_SCALE or 0.4
+        local maxS = CONSTANTS.MAX_UI_SCALE or 1.5
+        State.uiScale = math.clamp(math.floor((newScale) * 10 + 0.5) / 10, minS, maxS)
         if Refs.uiScaleObj then
             Refs.uiScaleObj.Scale = State.uiScale
         elseif outer then
@@ -643,12 +646,15 @@ local function buildGui()
         print("[SAKURA] UI scale =", State.uiScale)
     end
 
-    scaleDownBtn.Activated:Connect(function()
-        applyScale((State.uiScale or 1) - 0.1)
-    end)
-    scaleUpBtn.Activated:Connect(function()
-        applyScale((State.uiScale or 1) + 0.1)
-    end)
+    local function bindScale(btn, dir)
+        local fn = function()
+            applyScale((State.uiScale or 1) + dir * 0.1)
+        end
+        btn.Activated:Connect(fn)
+        btn.MouseButton1Click:Connect(fn)
+    end
+    bindScale(scaleDownBtn, -1)
+    bindScale(scaleUpBtn, 1)
 
     ----------------------------------------------------------------
     -- SETTINGS PANEL (attached to right of main GUI)
@@ -737,7 +743,7 @@ local function buildGui()
         if v then setSpamDelay(v) else delayBox.Text = tostring(State.spamDelay) end
     end)
 
-    settingsBtn.Activated:Connect(function()
+    local function toggleSettings()
         State.settingsOpen = not State.settingsOpen
         settingsPanel.Visible = State.settingsOpen
         if State.settingsOpen then
@@ -746,7 +752,9 @@ local function buildGui()
         else
             settingsBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
         end
-    end)
+    end
+    settingsBtn.Activated:Connect(toggleSettings)
+    settingsBtn.MouseButton1Click:Connect(toggleSettings)
 
     local powerCardRef, keyCardRef
     local function toggleMinimize()
