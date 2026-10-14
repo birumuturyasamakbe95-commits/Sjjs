@@ -586,45 +586,45 @@ local function buildGui()
     corner(mobileBtn, 9)
 
     ----------------------------------------------------------------
-    -- TOP CONTROLS: < > scale + minimize
+    -- TOP CONTROLS: < > scale + minimize + D (delay)  — parent=main so not clipped
     ----------------------------------------------------------------
     local topControls = Instance.new("Frame")
     topControls.Name = "TopControls"
-    topControls.Size = UDim2.new(0, 134, 0, 28)
-    topControls.Position = UDim2.new(1, -142, 0, 8)
+    topControls.Size = UDim2.new(0, 120, 0, 26)
+    topControls.Position = UDim2.new(1, -130, 0, 10)
     topControls.BackgroundTransparency = 1
     topControls.BorderSizePixel = 0
-    topControls.ZIndex = 50
-    topControls.Parent = content
+    topControls.ZIndex = 100
+    topControls.Parent = main
 
     local function makeCtrlBtn(name, label, x)
         local b = Instance.new("TextButton")
         b.Name = name
-        b.Size = UDim2.new(0, 30, 0, 28)
+        b.Size = UDim2.new(0, 26, 0, 26)
         b.Position = UDim2.new(0, x, 0, 0)
         b.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
         b.BackgroundTransparency = 0.05
         b.BorderSizePixel = 0
         b.Text = label
         b.Font = Enum.Font.GothamBold
-        b.TextSize = 16
+        b.TextSize = 14
         b.TextColor3 = Color3.fromRGB(255, 255, 255)
         b.AutoButtonColor = true
         b.Active = true
         b.Selectable = true
-        b.ZIndex = 55
+        b.ZIndex = 101
         b.Parent = topControls
-        corner(b, 8)
+        corner(b, 7)
         stroke(b, Color3.fromRGB(70, 70, 75), 1.2, 0.2)
         return b
     end
 
     local scaleDownBtn = makeCtrlBtn("ScaleDown", "<", 0)
-    local scaleUpBtn = makeCtrlBtn("ScaleUp", ">", 34)
-    local minBtn = makeCtrlBtn("Minimize", "—", 68)
-    -- "D" = Delay panel (works on all executors; emoji may not render)
-    local settingsBtn = makeCtrlBtn("Settings", "D", 102)
-    settingsBtn.TextSize = 14
+    local scaleUpBtn = makeCtrlBtn("ScaleUp", ">", 30)
+    local minBtn = makeCtrlBtn("Minimize", "-", 60)
+    local settingsBtn = makeCtrlBtn("Settings", "D", 90)
+    settingsBtn.TextSize = 13
+    settingsBtn.BackgroundColor3 = Color3.fromRGB(50, 35, 40)
 
     local function applyScale(newScale)
         local minS = CONSTANTS.MIN_UI_SCALE or 0.4
@@ -1313,4 +1313,4 @@ _G.SakuraSpeedBypass = {
     SetPower = setPower,
 }
 
-print("[SAKURA] Speed Bypass loaded")
+print("[SAKURA] Speed Bypass v2.2 loaded | scale 0.4-1.5 | press D for delay")
