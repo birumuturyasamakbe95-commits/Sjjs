@@ -655,78 +655,79 @@ local function buildGui()
     bindScale(scaleUpBtn, 1)
 
     ----------------------------------------------------------------
-    -- SETTINGS PANEL (attached to right of main GUI)
+    -- SETTINGS PANEL — inside main GUI (joined overlay, always on screen)
     ----------------------------------------------------------------
     local settingsPanel = Instance.new("Frame")
     settingsPanel.Name = "SettingsPanel"
-    settingsPanel.Size = UDim2.new(0, 160, 0, 130)
-    settingsPanel.Position = UDim2.new(1, 10, 0, 8)
-    settingsPanel.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    settingsPanel.Size = UDim2.new(1, -28, 0, 118)
+    settingsPanel.Position = UDim2.new(0, 14, 0, 100)
+    settingsPanel.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
     settingsPanel.BackgroundTransparency = 0
     settingsPanel.BorderSizePixel = 0
     settingsPanel.Visible = false
-    settingsPanel.ZIndex = 120
-    settingsPanel.Parent = outer
+    settingsPanel.ZIndex = 200
+    settingsPanel.Parent = main
     corner(settingsPanel, 14)
-    stroke(settingsPanel, Color3.fromRGB(190, 55, 40), 2.2, 0.15)
+    stroke(settingsPanel, Color3.fromRGB(190, 55, 40), 2.2, 0.1)
 
     local spTitle = Instance.new("TextLabel")
-    spTitle.Size = UDim2.new(1, -16, 0, 22)
-    spTitle.Position = UDim2.new(0, 10, 0, 8)
+    spTitle.Size = UDim2.new(1, -50, 0, 22)
+    spTitle.Position = UDim2.new(0, 12, 0, 8)
     spTitle.BackgroundTransparency = 1
-    spTitle.Text = "SETTINGS"
+    spTitle.Text = "SPAM DELAY"
     spTitle.Font = Enum.Font.GothamBold
-    spTitle.TextSize = 13
-    spTitle.TextColor3 = Theme.BorderGlow
+    spTitle.TextSize = 14
+    spTitle.TextColor3 = Color3.fromRGB(255, 120, 100)
     spTitle.TextXAlignment = Enum.TextXAlignment.Left
-    spTitle.ZIndex = 41
+    spTitle.ZIndex = 201
     spTitle.Parent = settingsPanel
 
-    local delayLbl = Instance.new("TextLabel")
-    delayLbl.Size = UDim2.new(1, -16, 0, 16)
-    delayLbl.Position = UDim2.new(0, 10, 0, 34)
-    delayLbl.BackgroundTransparency = 1
-    delayLbl.Text = "SPAM DELAY (s)"
-    delayLbl.Font = Enum.Font.Gotham
-    delayLbl.TextSize = 11
-    delayLbl.TextColor3 = Theme.TextDim
-    delayLbl.TextXAlignment = Enum.TextXAlignment.Left
-    delayLbl.ZIndex = 41
-    delayLbl.Parent = settingsPanel
+    local closeSp = Instance.new("TextButton")
+    closeSp.Name = "CloseSettings"
+    closeSp.Size = UDim2.new(0, 28, 0, 28)
+    closeSp.Position = UDim2.new(1, -36, 0, 6)
+    closeSp.BackgroundColor3 = Color3.fromRGB(40, 30, 32)
+    closeSp.BorderSizePixel = 0
+    closeSp.Text = "X"
+    closeSp.Font = Enum.Font.GothamBold
+    closeSp.TextSize = 14
+    closeSp.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeSp.ZIndex = 202
+    closeSp.Parent = settingsPanel
+    corner(closeSp, 8)
 
     local delayBox = Instance.new("TextBox")
     delayBox.Name = "DelayBox"
-    delayBox.Size = UDim2.new(1, -20, 0, 32)
-    delayBox.Position = UDim2.new(0, 10, 0, 52)
+    delayBox.Size = UDim2.new(1, -24, 0, 40)
+    delayBox.Position = UDim2.new(0, 12, 0, 38)
     delayBox.BackgroundColor3 = Theme.PanelInner
-    delayBox.BackgroundTransparency = 0.05
+    delayBox.BackgroundTransparency = 0
     delayBox.BorderSizePixel = 0
     delayBox.Text = tostring(State.spamDelay or CONSTANTS.SPAM_DELAY)
-    delayBox.Font = Enum.Font.GothamBold
-    delayBox.TextSize = 16
+    delayBox.Font = Enum.Font.GothamBlack
+    delayBox.TextSize = 22
     delayBox.TextColor3 = Theme.Text
     delayBox.ClearTextOnFocus = false
     delayBox.TextXAlignment = Enum.TextXAlignment.Center
-    delayBox.ZIndex = 42
+    delayBox.ZIndex = 202
     delayBox.Parent = settingsPanel
     corner(delayBox, 10)
-    stroke(delayBox, Theme.Stroke, 1, 0.3)
+    stroke(delayBox, Theme.Stroke, 1.2, 0.25)
 
     local delayHint = Instance.new("TextLabel")
-    delayHint.Size = UDim2.new(1, -16, 0, 14)
-    delayHint.Position = UDim2.new(0, 10, 0, 90)
+    delayHint.Size = UDim2.new(1, -24, 0, 24)
+    delayHint.Position = UDim2.new(0, 12, 0, 86)
     delayHint.BackgroundTransparency = 1
-    delayHint.Text = "0.02 – 1.0  (lower = stronger)"
+    delayHint.Text = "Yaz + Enter  |  0.02 – 1.0  (dusuk = guclu)"
     delayHint.Font = Enum.Font.Gotham
-    delayHint.TextSize = 10
+    delayHint.TextSize = 11
     delayHint.TextColor3 = Theme.TextDim
-    delayHint.TextXAlignment = Enum.TextXAlignment.Left
-    delayHint.ZIndex = 41
+    delayHint.TextXAlignment = Enum.TextXAlignment.Center
+    delayHint.ZIndex = 201
     delayHint.Parent = settingsPanel
 
     local function setSpamDelay(val)
         val = math.clamp(tonumber(val) or State.spamDelay, CONSTANTS.MIN_DELAY, CONSTANTS.MAX_DELAY)
-        -- round to 3 decimals
         val = math.floor(val * 1000 + 0.5) / 1000
         State.spamDelay = val
         CONSTANTS.SPAM_DELAY = val
@@ -741,20 +742,31 @@ local function buildGui()
         if v then setSpamDelay(v) else delayBox.Text = tostring(State.spamDelay) end
     end)
 
+    local function openSettings()
+        State.settingsOpen = true
+        settingsPanel.Visible = true
+        settingsBtn.BackgroundColor3 = Color3.fromRGB(190, 55, 40)
+        delayBox.Text = tostring(State.spamDelay or CONSTANTS.SPAM_DELAY)
+        print("[SAKURA] settings panel OPEN")
+    end
+
+    local function closeSettings()
+        State.settingsOpen = false
+        settingsPanel.Visible = false
+        settingsBtn.BackgroundColor3 = Color3.fromRGB(50, 35, 40)
+        print("[SAKURA] settings panel CLOSED")
+    end
+
     local function toggleSettings()
-        State.settingsOpen = not State.settingsOpen
-        settingsPanel.Visible = State.settingsOpen == true
         if State.settingsOpen then
-            settingsBtn.BackgroundColor3 = Color3.fromRGB(190, 55, 40)
-            delayBox.Text = tostring(State.spamDelay or CONSTANTS.SPAM_DELAY)
-            print("[SAKURA] settings panel OPEN")
+            closeSettings()
         else
-            settingsBtn.BackgroundColor3 = Color3.fromRGB(50, 35, 40)
-            print("[SAKURA] settings panel CLOSED")
+            openSettings()
         end
     end
-    -- Only one connection — Activated + MouseButton1Click was double-toggling (open then instant close)
+
     settingsBtn.Activated:Connect(toggleSettings)
+    closeSp.Activated:Connect(closeSettings)
 
     local powerCardRef, keyCardRef
     local function toggleMinimize()
