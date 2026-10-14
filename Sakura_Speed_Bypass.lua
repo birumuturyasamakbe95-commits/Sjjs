@@ -647,11 +647,9 @@ local function buildGui()
     end
 
     local function bindScale(btn, dir)
-        local fn = function()
+        btn.Activated:Connect(function()
             applyScale((State.uiScale or 1) + dir * 0.1)
-        end
-        btn.Activated:Connect(fn)
-        btn.MouseButton1Click:Connect(fn)
+        end)
     end
     bindScale(scaleDownBtn, -1)
     bindScale(scaleUpBtn, 1)
@@ -661,16 +659,16 @@ local function buildGui()
     ----------------------------------------------------------------
     local settingsPanel = Instance.new("Frame")
     settingsPanel.Name = "SettingsPanel"
-    settingsPanel.Size = UDim2.new(0, 150, 0, 120)
-    settingsPanel.Position = UDim2.new(1, 8, 0, 0)
-    settingsPanel.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
-    settingsPanel.BackgroundTransparency = 0.05
+    settingsPanel.Size = UDim2.new(0, 160, 0, 130)
+    settingsPanel.Position = UDim2.new(1, 10, 0, 8)
+    settingsPanel.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    settingsPanel.BackgroundTransparency = 0
     settingsPanel.BorderSizePixel = 0
     settingsPanel.Visible = false
-    settingsPanel.ZIndex = 40
+    settingsPanel.ZIndex = 120
     settingsPanel.Parent = outer
     corner(settingsPanel, 14)
-    stroke(settingsPanel, Theme.BorderGlow, 2, 0.25)
+    stroke(settingsPanel, Color3.fromRGB(190, 55, 40), 2.2, 0.15)
 
     local spTitle = Instance.new("TextLabel")
     spTitle.Size = UDim2.new(1, -16, 0, 22)
@@ -745,16 +743,18 @@ local function buildGui()
 
     local function toggleSettings()
         State.settingsOpen = not State.settingsOpen
-        settingsPanel.Visible = State.settingsOpen
+        settingsPanel.Visible = State.settingsOpen == true
         if State.settingsOpen then
             settingsBtn.BackgroundColor3 = Color3.fromRGB(190, 55, 40)
             delayBox.Text = tostring(State.spamDelay or CONSTANTS.SPAM_DELAY)
+            print("[SAKURA] settings panel OPEN")
         else
-            settingsBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+            settingsBtn.BackgroundColor3 = Color3.fromRGB(50, 35, 40)
+            print("[SAKURA] settings panel CLOSED")
         end
     end
+    -- Only one connection — Activated + MouseButton1Click was double-toggling (open then instant close)
     settingsBtn.Activated:Connect(toggleSettings)
-    settingsBtn.MouseButton1Click:Connect(toggleSettings)
 
     local powerCardRef, keyCardRef
     local function toggleMinimize()
